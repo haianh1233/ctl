@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/conduktor/ctl/client"
@@ -56,9 +58,87 @@ For server TLS authentication, you can ignore the certificate by setting CDK_INS
 	},
 }
 
+func CaptureOutput(f func() error) (string, error) {
+	// Save original stdout
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+
+	// Create pipes
+	rOut, wOut, _ := os.Pipe()
+	rErr, wErr, _ := os.Pipe()
+
+	// Redirect stdout and stderr
+	os.Stdout = wOut
+	os.Stderr = wErr
+
+	// Buffer to store output
+	var bufOut, bufErr bytes.Buffer
+
+	// Copy to buffer in background
+	outChan := make(chan struct{})
+	errChan := make(chan struct{})
+
+	go func() {
+		io.Copy(&bufOut, rOut)
+		close(outChan)
+	}()
+
+	go func() {
+		io.Copy(&bufErr, rErr)
+		close(errChan)
+	}()
+
+	// Execute the function
+	err := f()
+
+	// Close pipes
+	wOut.Close()
+	wErr.Close()
+
+	// Wait for copying to complete
+	<-outChan
+	<-errChan
+
+	// Restore original stdout and stderr
+	os.Stdout = oldStdout
+	os.Stderr = oldStderr
+
+	// Combine stdout and stderr
+	result := bufOut.String()
+	if bufErr.Len() > 0 {
+		if result != "" {
+			result += "\n"
+		}
+		result += bufErr.String()
+	}
+
+	return result, err
+}
+
+// ExecuteCapture executes a command and captures its output
+func ExecuteCapture(args ...string) (string, error) {
+	// Create a local copy to avoid modifying the original
+	cmd := *rootCmd
+
+	// Set arguments if provided
+	if len(args) > 0 {
+		cmd.SetArgs(args)
+	}
+
+	// Capture and return the output
+	return CaptureOutput(func() error {
+		return cmd.Execute()
+	})
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(args ...string) {
+	if len(args) > 0 {
+		// If args provided, use them
+		rootCmd.SetArgs(args)
+	}
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
