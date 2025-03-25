@@ -1,0 +1,113 @@
+{
+  "Alert": [
+    "Management",
+    "Conduktor Console",
+    "Monitor alerts for Kafka clusters and resources"
+  ],
+  "AliasTopic": [
+    "Management",
+    "Conduktor Gateway",
+    "Virtual topic representation with mapped physical topic"
+  ],
+  "Application": [
+    "Management",
+    "Conduktor Console",
+    "Self-serve applications for managing Kafka resources"
+  ],
+  "ApplicationGroup": [
+    "Management",
+    "Conduktor Console",
+    "Groups associated with applications for access control"
+  ],
+  "ApplicationInstance": [
+    "Management",
+    "Conduktor Console",
+    "Deployments of applications to specific Kafka clusters"
+  ],
+  "ApplicationInstancePermission": [
+    "Management",
+    "Conduktor Console",
+    "Permissions for resources within application instances"
+  ],
+  "ConcentrationRule": [
+    "Management",
+    "Conduktor Gateway",
+    "Rules for mapping virtual topic patterns to physical topics"
+  ],
+  "Connector": [
+    "Management",
+    "Conduktor Console",
+    "Kafka Connect connectors configuration and management"
+  ],
+  "GatewayGroup": [
+    "Management",
+    "Conduktor Gateway",
+    "Group definitions for Conduktor Gateway access control"
+  ],
+  "GatewayServiceAccount": [
+    "Management",
+    "Conduktor Gateway",
+    "Service accounts for authentication to Conduktor Gateway"
+  ],
+  "GetAll": [
+    "Management",
+    "Conduktor Console",
+    "Conduktor Gateway",
+    "Retrieve all global resources"
+  ],
+  "Group": [
+    "Management",
+    "Conduktor Console",
+    "User groups for IAM permissions within Conduktor"
+  ],
+  "IndexedTopic": [
+    "Management",
+    "Conduktor Console",
+    "Topics that are indexed for SQL querying capabilities"
+  ],
+  "Interceptor": [
+    "Management",
+    "Conduktor Gateway",
+    "Plugins that intercept and modify Kafka requests/responses"
+  ],
+  "KafkaCluster": [
+    "Management",
+    "Conduktor Console",
+    "Kafka cluster connection configuration"
+  ],
+  "KafkaConnectCluster": [
+    "Management",
+    "Conduktor Console",
+    "Kafka Connect cluster connection configuration"
+  ],
+  "KsqlDBCluster": [
+    "Management",
+    "Conduktor Console",
+    "ksqlDB cluster connection configuration"
+  ],
+  "Subject": [
+    "Management",
+    "Conduktor Console",
+    "Schema Registry subject configuration"
+  ],
+  "Topic": [
+    "Management",
+    "Conduktor Console",
+    "Kafka topic configuration and management"
+  ],
+  "TopicPolicy": [
+    "Management",
+    "Conduktor Console",
+    "Policy definitions for topic configuration constraints"
+  ],
+  "User": [
+    "Management",
+    "Conduktor Console",
+    "User account management within Conduktor"
+  ],
+  "VirtualCluster": [
+    "Management",
+    "Conduktor Gateway",
+    "Virtual Kafka cluster configuration for Conduktor Gateway"
+  ]
+}

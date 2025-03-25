@@ -14,7 +14,10 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"os"
+	"strings"
 )
+
+const KindGetAll = "GetAll"
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
@@ -37,15 +40,33 @@ func composeToolOptions(optionSlice []mcp.ToolOption) mcp.ToolOption {
 	}
 }
 
-func initTools(kinds schema.KindCatalog, server *server.MCPServer) {
-	var format OutputFormat = JSON
+func getToolOptionsWithDescription(kind string, descriptions schema.KindDescription) []mcp.ToolOption {
+	var toolOptions []mcp.ToolOption
 
-	initAllResourcesTool(kinds, server, format)
-	initOtherResourcesTool(kinds, server, format)
+	if descList, exists := descriptions[kind]; exists && len(descList) > 0 {
+		// Join all descriptions into a single string with periods
+		combinedDescription := strings.Join(descList, ". ")
+		toolOptions = append(toolOptions, mcp.WithDescription(combinedDescription))
+	} else {
+		// Fallback description if none found
+		defaultDesc := fmt.Sprintf("Resource of kind %s", kind)
+		toolOptions = append(toolOptions, mcp.WithDescription(defaultDesc))
+	}
+
+	return toolOptions
 }
 
-func initAllResourcesTool(kinds schema.KindCatalog, server *server.MCPServer, format OutputFormat) {
-	server.AddTool(mcp.NewTool("GetAll", mcp.WithDescription("Get all global resources from Conduktor Console and Conduktor Gateway")), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func initTools(kinds schema.KindCatalog, kindDescriptions schema.KindDescription, server *server.MCPServer) {
+	format := JSON
+
+	initAllResourcesTool(kinds, kindDescriptions, server, format)
+	initOtherResourcesTool(kinds, kindDescriptions, server, format)
+}
+
+func initAllResourcesTool(kinds schema.KindCatalog, kindDescriptions schema.KindDescription, server *server.MCPServer, format OutputFormat) {
+	toolOptions := getToolOptionsWithDescription(KindGetAll, kindDescriptions)
+
+	server.AddTool(mcp.NewTool(KindGetAll, composeToolOptions(toolOptions)), func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var allResources []resource.Resource
 		var errors []error
 		kindsByName := sortedKeys(kinds)
@@ -59,7 +80,7 @@ func initAllResourcesTool(kinds schema.KindCatalog, server *server.MCPServer, fo
 		}
 
 		for _, key := range kindsByName {
-			kind := savedKindCatalog[key]
+			kind := kinds[key]
 			if !kind.IsRootKind() {
 				continue
 			}
@@ -96,16 +117,13 @@ func initAllResourcesTool(kinds schema.KindCatalog, server *server.MCPServer, fo
 
 }
 
-func initOtherResourcesTool(kinds schema.KindCatalog, server *server.MCPServer, format OutputFormat) {
+func initOtherResourcesTool(kinds schema.KindCatalog, kindDescriptions schema.KindDescription, server *server.MCPServer, format OutputFormat) {
 	for name, kind := range kinds {
 		_, isGatewayKind := kind.GetLatestKindVersion().(*schema.GatewayKindVersion)
 
-		var toolOptions []mcp.ToolOption
+		toolOptions := getToolOptionsWithDescription(name, kindDescriptions)
 		if !isGatewayKind {
 			toolOptions = append(toolOptions, mcp.WithString("resource_name", mcp.Description("Name of the resource to get")))
-			toolOptions = append(toolOptions, mcp.WithDescription(fmt.Sprintf("Get resouce of kind %s from Conduktor Console", name)))
-		} else {
-			mcp.WithDescription(fmt.Sprintf("Get resouce of kind %s from Conduktor Gateway", name))
 		}
 
 		for _, param := range kind.GetParentFlag() {
@@ -180,7 +198,7 @@ func initOtherResourcesTool(kinds schema.KindCatalog, server *server.MCPServer, 
 					return nil, fmt.Errorf("error fetching resource: %w", err)
 				}
 
-				jsonResult, err = formatResources(results, JSON)
+				jsonResult, err = formatResources(results, format)
 			} else if isConsole(kind) && consoleApiClientError == nil {
 				var results []resource.Resource
 
@@ -198,7 +216,7 @@ func initOtherResourcesTool(kinds schema.KindCatalog, server *server.MCPServer, 
 					return nil, fmt.Errorf("error fetching resource: %w", err)
 				}
 
-				jsonResult, err = formatResources(results, JSON)
+				jsonResult, err = formatResources(results, format)
 			} else {
 				return nil, fmt.Errorf("no client available for kind %s", kind.GetName())
 			}
@@ -236,7 +254,13 @@ func startMCPServer() {
 		"1.0.0",
 	)
 
-	initTools(catalog.Kind, s)
+	kindDescriptions, err := schema.LoadKindDescriptions()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load kind descriptions: %v\n", err)
+		kindDescriptions = make(schema.KindDescription)
+	}
+
+	initTools(catalog.Kind, kindDescriptions, s)
 
 	if err := server.ServeStdio(s); err != nil {
 		fmt.Printf("Server error: %v\n", err)
