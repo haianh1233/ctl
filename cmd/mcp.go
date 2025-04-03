@@ -13,11 +13,14 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"io"
+	"log"
 	"os"
 	"strings"
 )
 
 const KindGetAll = "GetAll"
+
+var ssePort int
 
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
@@ -30,6 +33,7 @@ var mcpCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(mcpCmd)
+	mcpCmd.Flags().IntVar(&ssePort, "sse", 0, "Port for the Server-Sent Events MCP server (0 to disable)")
 }
 
 func composeToolOptions(optionSlice []mcp.ToolOption) mcp.ToolOption {
@@ -249,7 +253,7 @@ func startMCPServer() {
 	}
 	catalog := consoleKinds.Merge(gatewayKinds)
 
-	s := server.NewMCPServer(
+	mcpServer := server.NewMCPServer(
 		"Conduktor MCP Server",
 		"1.0.0",
 	)
@@ -260,10 +264,22 @@ func startMCPServer() {
 		kindDescriptions = make(schema.KindDescription)
 	}
 
-	initTools(catalog.Kind, kindDescriptions, s)
+	initTools(catalog.Kind, kindDescriptions, mcpServer)
 
-	if err := server.ServeStdio(s); err != nil {
-		fmt.Printf("Server error: %v\n", err)
+	if ssePort > 0 {
+		// sse server with specified port
+		address := fmt.Sprintf(":%d", ssePort)
+		baseURL := fmt.Sprintf("http://localhost:%d", ssePort)
+		sseServer := server.NewSSEServer(mcpServer, server.WithBaseURL(baseURL))
+		log.Printf("SSE server listening on %s", address)
+		if err := sseServer.Start(address); err != nil {
+			fmt.Printf("Server error: %v\n", err)
+		}
+	} else {
+		// stdio server
+		if err := server.ServeStdio(mcpServer); err != nil {
+			fmt.Printf("Server error: %v\n", err)
+		}
 	}
 }
 
