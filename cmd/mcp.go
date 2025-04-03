@@ -269,8 +269,7 @@ func startMCPServer() {
 	if ssePort > 0 {
 		// sse server with specified port
 		address := fmt.Sprintf(":%d", ssePort)
-		baseURL := fmt.Sprintf("http://localhost:%d", ssePort)
-		sseServer := server.NewSSEServer(mcpServer, server.WithBaseURL(baseURL))
+		sseServer := server.NewSSEServer(mcpServer, server.WithBasePath("/"))
 		log.Printf("SSE server listening on %s", address)
 		if err := sseServer.Start(address); err != nil {
 			fmt.Printf("Server error: %v\n", err)
